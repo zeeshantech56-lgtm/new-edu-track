@@ -33,13 +33,13 @@ import {
 
 // ─── FIREBASE INITIALIZATION ──────────────────────────────────────────────────
 const firebaseConfig = {
-  apiKey: "AIzaSyB_X9rMXp2dkML8rfdrRoILvElzx8V8yoE",
-  authDomain: "edu-track-cff9c.firebaseapp.com",
-  projectId: "edu-track-cff9c",
-  storageBucket: "edu-track-cff9c.firebasestorage.app",
-  messagingSenderId: "522496773371",
-  appId: "1:522496773371:web:a8988d3eefd5f995a4745e",
-  measurementId: "G-4BGEXF0R1W"
+  apiKey: "AIzaSyCxDK32bbq-Y8iYyoq1s-0vqNXpn02eepk",
+  authDomain: "new-edu-track.firebaseapp.com",
+  projectId: "new-edu-track",
+  storageBucket: "new-edu-track.firebasestorage.app",
+  messagingSenderId: "106894032065",
+  appId: "1:106894032065:web:4d53d7f33ca1280ea96840",
+  measurementId: "G-5J63MEB0GJ"
 };
 
 const app = initializeApp(firebaseConfig);
