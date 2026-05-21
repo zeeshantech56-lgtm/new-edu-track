@@ -696,6 +696,7 @@ export default function App() {
   const [authReady, setAuthReady] = useState(false);
   const [isOnline, setIsOnline] = useState(navigator.onLine);
   const [pendingSync, setPendingSync] = useState(0);
+  const [errorMsg, setErrorMsg] = useState("");
 
   useEffect(() => {
     const processQueue = async () => {
@@ -720,20 +721,27 @@ export default function App() {
   useEffect(() => {
     const initAuth = async () => {
       try { await signInAnonymously(auth); }
-      catch(e) { console.error("Firebase Auth Fail:", e); }
+      catch(e) { 
+        console.error("Firebase Auth Fail:", e);
+        setErrorMsg("Firebase Auth Failed: Please enable Anonymous Authentication in Firebase console.");
+        setLoading(false);
+      }
       finally { setAuthReady(true); }
     };
     initAuth();
-    const unsub = onAuthStateChanged(auth, u => setFbUser(u));
+    const unsub = onAuthStateChanged(auth, u => {
+      setFbUser(u);
+      if (authReady && !u) setLoading(false);
+    });
     return () => unsub();
-  }, []);
+  }, [authReady]);
 
   useEffect(() => {
     if (!authReady || !fbUser) return;
     const base = ['artifacts', appId, 'public', 'data'];
     const unsubStuds = onSnapshot(collection(db, ...base, 'students'), s => {
       const d = {}; s.forEach(x => d[x.id] = x.data().list); setStudents(d); setLoading(false);
-    }, e => console.error(e));
+    }, e => { console.error(e); setErrorMsg("Firestore Error: Missing permissions or setup."); setLoading(false); });
     const unsubAtt = onSnapshot(collection(db, ...base, 'attendance'), s => {
       const d = {}; s.forEach(x => d[x.id] = x.data()); setAttendance(d);
     }, e => console.error(e));
@@ -798,6 +806,17 @@ export default function App() {
     }
     setLoading(false);
   };
+
+  if (errorMsg) return (
+    <div className="login-screen">
+      <div className="login-card" style={{ textAlign: "center", margin: "0 auto" }}>
+        <div className="login-icon" style={{ margin: "0 auto 1rem" }}><AlertCircle size={32} className="text-red" /></div>
+        <h1 className="login-title">Connection Error</h1>
+        <div className="error-banner mt-4">{errorMsg}</div>
+        <p className="text-muted mt-4" style={{ fontSize: "0.875rem" }}>Please check your Firebase configuration and ensure Anonymous Authentication is enabled.</p>
+      </div>
+    </div>
+  );
 
   if (loading) return (
     <div className="loading-screen">
