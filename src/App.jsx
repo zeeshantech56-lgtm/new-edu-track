@@ -278,6 +278,7 @@ function Dashboard({ students, attendance, user, onSeed }) {
 
 function MarkAttendance({ students, attendance, onSaveAtt, user, holidays }) {
   const isTeacher = user.role === "teacher";
+  const isGuest = user.role === "guest";
   const [cls, setCls] = useState(isTeacher ? user.assignedClass : "nursery");
   const [sec, setSec] = useState(isTeacher ? user.assignedSection : "A");
   const [date, setDate] = useState(fmtDate(new Date()));
@@ -337,12 +338,16 @@ function MarkAttendance({ students, attendance, onSaveAtt, user, holidays }) {
         </div>
         <div className="header-actions">
           {msg && <span className="msg-success">{msg}</span>}
-          <button onClick={handleSmartDefault} disabled={isHoliday} className="btn-secondary">
-            <Copy size={16} /> Auto-Fill
-          </button>
-          <button onClick={handleSave} disabled={isHoliday} className="btn-primary">
-            {saving ? "Syncing..." : <><CheckSquare size={18} /> Save</>}
-          </button>
+          {!isGuest && (
+            <>
+              <button onClick={handleSmartDefault} disabled={isHoliday} className="btn-secondary">
+                <Copy size={16} /> Auto-Fill
+              </button>
+              <button onClick={handleSave} disabled={isHoliday} className="btn-primary">
+                {saving ? "Syncing..." : <><CheckSquare size={18} /> Save</>}
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -377,7 +382,7 @@ function MarkAttendance({ students, attendance, onSaveAtt, user, holidays }) {
           {list.map(s => (
             <div
               key={s.id}
-              onClick={() => setMarked(p => ({...p, [s.id]: !p[s.id]}))}
+              onClick={() => !isGuest && setMarked(p => ({...p, [s.id]: !p[s.id]}))}
               className={`student-card ${marked[s.id] ? 'present' : 'absent'}`}
             >
               <div className={`student-avatar ${marked[s.id] ? 'present' : 'absent'}`}>
@@ -401,7 +406,7 @@ function MarkAttendance({ students, attendance, onSaveAtt, user, holidays }) {
 
 // ─── STUDENT ADMIN ───────────────────────────────────────────────────────────
 
-function StudentAdmin({ students, onSaveStuds }) {
+function StudentAdmin({ students, onSaveStuds, user }) {
   const [cls, setCls] = useState("nursery");
   const [sec, setSec] = useState("A");
   const [newName, setNewName] = useState("");
@@ -456,14 +461,16 @@ function StudentAdmin({ students, onSaveStuds }) {
             {SECTIONS.map(s=><option key={s} value={s}>Sec {s}</option>)}
           </select>
         </div>
-        <div className="flex-row-gap flex-1">
-          <input className="input flex-1" placeholder="Full Name..." value={newName} onChange={e=>setNewName(e.target.value)} />
-          <button onClick={add} className="btn-primary"><Plus size={16}/> Add</button>
-          <label className="btn-green cursor-pointer">
-            <Upload size={16}/> CSV Import
-            <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
-          </label>
-        </div>
+        {user?.role !== "guest" && (
+          <div className="flex-row-gap flex-1">
+            <input className="input flex-1" placeholder="Full Name..." value={newName} onChange={e=>setNewName(e.target.value)} />
+            <button onClick={add} className="btn-primary"><Plus size={16}/> Add</button>
+            <label className="btn-green cursor-pointer">
+              <Upload size={16}/> CSV Import
+              <input type="file" accept=".csv" className="hidden" onChange={handleImport} />
+            </label>
+          </div>
+        )}
       </div>
 
       <div className="table-wrap">
@@ -472,7 +479,7 @@ function StudentAdmin({ students, onSaveStuds }) {
             <tr>
               <th>Roll No</th>
               <th>Student Name</th>
-              <th className="text-right">Action</th>
+              {user?.role !== "guest" && <th className="text-right">Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -488,19 +495,21 @@ function StudentAdmin({ students, onSaveStuds }) {
                     ? <input className="input input-sm" value={editName} onChange={e=>setEditName(e.target.value)} />
                     : s.name}
                 </td>
-                <td className="text-right">
-                  {editingId === s.id ? (
-                    <div className="flex-row-gap justify-end">
-                      <button onClick={saveEdit} className="btn-text text-green">SAVE</button>
-                      <button onClick={()=>setEditingId(null)} className="btn-text text-muted">CANCEL</button>
-                    </div>
-                  ) : (
-                    <div className="flex-row-gap justify-end">
-                      <button onClick={()=>{setEditingId(s.id);setEditName(s.name);setEditRoll(s.rollNo);}} className="icon-btn text-blue"><Edit2 size={16}/></button>
-                      <button onClick={()=>onSaveStuds(key, current.filter(x=>x.id!==s.id))} className="icon-btn text-red"><Trash2 size={16}/></button>
-                    </div>
-                  )}
-                </td>
+                {user?.role !== "guest" && (
+                  <td className="text-right">
+                    {editingId === s.id ? (
+                      <div className="flex-row-gap justify-end">
+                        <button onClick={saveEdit} className="btn-text text-green">SAVE</button>
+                        <button onClick={()=>setEditingId(null)} className="btn-text text-muted">CANCEL</button>
+                      </div>
+                    ) : (
+                      <div className="flex-row-gap justify-end">
+                        <button onClick={()=>{setEditingId(s.id);setEditName(s.name);setEditRoll(s.rollNo);}} className="icon-btn text-blue"><Edit2 size={16}/></button>
+                        <button onClick={()=>onSaveStuds(key, current.filter(x=>x.id!==s.id))} className="icon-btn text-red"><Trash2 size={16}/></button>
+                      </div>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {current.length === 0 && (
@@ -515,7 +524,7 @@ function StudentAdmin({ students, onSaveStuds }) {
 
 // ─── HOLIDAY CALENDAR ────────────────────────────────────────────────────────
 
-function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday }) {
+function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday, user }) {
   const [date, setDate] = useState(fmtDate(new Date()));
   const [name, setName] = useState("");
 
@@ -532,20 +541,22 @@ function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday }) {
     <div className="space-y-6">
       <h1 className="page-title">Academic Calendar</h1>
 
-      <form onSubmit={handleAdd} className="card">
-        <h2 className="section-heading">Register Holiday</h2>
-        <div className="filter-bar">
-          <div>
-            <label className="field-label">Date</label>
-            <input type="date" className="input" value={date} onChange={e=>setDate(e.target.value)} required />
+      {user?.role !== "guest" && (
+        <form onSubmit={handleAdd} className="card">
+          <h2 className="section-heading">Register Holiday</h2>
+          <div className="filter-bar">
+            <div>
+              <label className="field-label">Date</label>
+              <input type="date" className="input" value={date} onChange={e=>setDate(e.target.value)} required />
+            </div>
+            <div className="flex-1">
+              <label className="field-label">Holiday Name</label>
+              <input placeholder="e.g. Summer Break, Diwali..." className="input w-full" value={name} onChange={e=>setName(e.target.value)} required />
+            </div>
+            <button type="submit" className="btn-primary self-end">Add Holiday</button>
           </div>
-          <div className="flex-1">
-            <label className="field-label">Holiday Name</label>
-            <input placeholder="e.g. Summer Break, Diwali..." className="input w-full" value={name} onChange={e=>setName(e.target.value)} required />
-          </div>
-          <button type="submit" className="btn-primary self-end">Add Holiday</button>
-        </div>
-      </form>
+        </form>
+      )}
 
       <div className="table-wrap">
         <table className="table">
@@ -553,7 +564,7 @@ function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday }) {
             <tr>
               <th>Date</th>
               <th>Holiday Name</th>
-              <th className="text-right">Action</th>
+              {user?.role !== "guest" && <th className="text-right">Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -561,9 +572,11 @@ function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday }) {
               <tr key={h.date}>
                 <td className="mono text-muted">{h.date}</td>
                 <td className="font-semibold">{h.name}</td>
-                <td className="text-right">
-                  <button onClick={()=>onDeleteHoliday(h.date)} className="icon-btn text-red"><Trash2 size={16}/></button>
-                </td>
+                {user?.role !== "guest" && (
+                  <td className="text-right">
+                    <button onClick={()=>onDeleteHoliday(h.date)} className="icon-btn text-red"><Trash2 size={16}/></button>
+                  </td>
+                )}
               </tr>
             ))}
             {holidayList.length === 0 && <tr><td colSpan={3} className="empty-state">No holidays registered.</td></tr>}
@@ -576,7 +589,7 @@ function HolidayAdmin({ holidays, onSaveHoliday, onDeleteHoliday }) {
 
 // ─── ACCOUNTS PAGE ───────────────────────────────────────────────────────────
 
-function AccountsPage({ accounts, onSaveAccount, onDeleteAccount }) {
+function AccountsPage({ accounts, onSaveAccount, onDeleteAccount, user }) {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [role, setRole] = useState("teacher");
@@ -594,35 +607,37 @@ function AccountsPage({ accounts, onSaveAccount, onDeleteAccount }) {
     <div className="space-y-6">
       <h1 className="page-title">Staff Accounts</h1>
 
-      <form onSubmit={handleAdd} className="card">
-        <h2 className="section-heading">Create New Account</h2>
-        <div className="grid-5">
-          <div><label className="field-label">Username</label><input className="input w-full" value={username} onChange={e=>setUsername(e.target.value)} required /></div>
-          <div><label className="field-label">Password</label><input type="password" className="input w-full" value={password} onChange={e=>setPassword(e.target.value)} required /></div>
-          <div>
-            <label className="field-label">Role</label>
-            <select className="select w-full" value={role} onChange={e=>setRole(e.target.value)}>
-              <option value="teacher">Teacher</option>
-              <option value="admin">Administrator</option>
-            </select>
+      {user?.role !== "guest" && (
+        <form onSubmit={handleAdd} className="card">
+          <h2 className="section-heading">Create New Account</h2>
+          <div className="grid-5">
+            <div><label className="field-label">Username</label><input className="input w-full" value={username} onChange={e=>setUsername(e.target.value)} required /></div>
+            <div><label className="field-label">Password</label><input type="password" className="input w-full" value={password} onChange={e=>setPassword(e.target.value)} required /></div>
+            <div>
+              <label className="field-label">Role</label>
+              <select className="select w-full" value={role} onChange={e=>setRole(e.target.value)}>
+                <option value="teacher">Teacher</option>
+                <option value="admin">Administrator</option>
+              </select>
+            </div>
+            {role === "teacher" ? (
+              <>
+                <div><label className="field-label">Class</label><select className="select w-full" value={cls} onChange={e=>setCls(e.target.value)}>{CLASSES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
+                <div><label className="field-label">Section</label><select className="select w-full" value={sec} onChange={e=>setSec(e.target.value)}>{SECTIONS.map(s=><option key={s} value={s}>Sec {s}</option>)}</select></div>
+              </>
+            ) : <div className="col-span-2"></div>}
           </div>
-          {role === "teacher" ? (
-            <>
-              <div><label className="field-label">Class</label><select className="select w-full" value={cls} onChange={e=>setCls(e.target.value)}>{CLASSES.map(c=><option key={c.id} value={c.id}>{c.label}</option>)}</select></div>
-              <div><label className="field-label">Section</label><select className="select w-full" value={sec} onChange={e=>setSec(e.target.value)}>{SECTIONS.map(s=><option key={s} value={s}>Sec {s}</option>)}</select></div>
-            </>
-          ) : <div className="col-span-2"></div>}
-        </div>
-        <div className="mt-5 flex justify-end">
-          <button type="submit" className="btn-primary">Create Account</button>
-        </div>
-      </form>
+          <div className="mt-5 flex justify-end">
+            <button type="submit" className="btn-primary">Create Account</button>
+          </div>
+        </form>
+      )}
 
       <div className="table-wrap">
         <table className="table">
           <thead>
             <tr>
-              <th>Username</th><th>Role</th><th>Assignment</th><th>Password</th><th className="text-right">Action</th>
+              <th>Username</th><th>Role</th><th>Assignment</th><th>Password</th>{user?.role !== "guest" && <th className="text-right">Action</th>}
             </tr>
           </thead>
           <tbody>
@@ -632,11 +647,13 @@ function AccountsPage({ accounts, onSaveAccount, onDeleteAccount }) {
                 <td><span className={`role-badge ${a.role}`}>{a.role}</span></td>
                 <td className="text-muted">{a.role === 'teacher' ? `${CLASSES.find(c=>c.id===a.assignedClass)?.label} (Sec ${a.assignedSection})` : 'Full Access'}</td>
                 <td className="mono text-muted">{a.password}</td>
-                <td className="text-right">
-                  {a.username !== 'admin' && (
-                    <button onClick={()=>onDeleteAccount(a.id)} className="icon-btn text-red"><Trash2 size={16}/></button>
-                  )}
-                </td>
+                {user?.role !== "guest" && (
+                  <td className="text-right">
+                    {a.username !== 'admin' && (
+                      <button onClick={()=>onDeleteAccount(a.id)} className="icon-btn text-red"><Trash2 size={16}/></button>
+                    )}
+                  </td>
+                )}
               </tr>
             ))}
             {accounts.length === 0 && <tr><td colSpan={5} className="empty-state">No accounts found.</td></tr>}
@@ -656,6 +673,7 @@ function LoginScreen({ onLogin, accounts }) {
 
   const handle = (e) => {
     e.preventDefault();
+    if (u.toLowerCase() === "guest" && p.toLowerCase() === "guest") { onLogin({ id: "guest", username: "Guest", role: "guest" }); return; }
     if (u === "admin" && p === "admin") { onLogin({ id: "admin", username: "Admin", role: "admin" }); return; }
     const match = accounts.find(a => a.username.toLowerCase() === u.toLowerCase() && a.password === p);
     if (match) onLogin(match);
@@ -827,11 +845,11 @@ export default function App() {
   if (!appUser) return <LoginScreen onLogin={setAppUser} accounts={accounts} />;
 
   const menu = [
-    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin","teacher"] },
-    { id: "mark", label: "Take Attendance", icon: CheckSquare, roles: ["admin","teacher"] },
-    { id: "records", label: "Student Admin", icon: Users, roles: ["admin"] },
-    { id: "calendar", label: "Calendar", icon: Calendar, roles: ["admin"] },
-    { id: "accounts", label: "Staff Accounts", icon: UserCircle, roles: ["admin"] },
+    { id: "dashboard", label: "Dashboard", icon: LayoutDashboard, roles: ["admin","teacher","guest"] },
+    { id: "mark", label: "Take Attendance", icon: CheckSquare, roles: ["admin","teacher","guest"] },
+    { id: "records", label: "Student Admin", icon: Users, roles: ["admin","guest"] },
+    { id: "calendar", label: "Calendar", icon: Calendar, roles: ["admin","guest"] },
+    { id: "accounts", label: "Staff Accounts", icon: UserCircle, roles: ["admin","guest"] },
   ].filter(m => m.roles.includes(appUser.role));
 
   return (
@@ -885,9 +903,9 @@ export default function App() {
         <main className="main-content">
           {page === "dashboard" && <Dashboard students={students} attendance={attendance} user={appUser} onSeed={seed} />}
           {page === "mark" && <MarkAttendance students={students} attendance={attendance} onSaveAtt={saveAtt} user={appUser} holidays={holidays} />}
-          {page === "records" && <StudentAdmin students={students} onSaveStuds={saveStuds} />}
-          {page === "calendar" && <HolidayAdmin holidays={holidays} onSaveHoliday={saveHoliday} onDeleteHoliday={deleteHoliday} />}
-          {page === "accounts" && <AccountsPage accounts={accounts} onSaveAccount={saveAcc} onDeleteAccount={delAcc} />}
+          {page === "records" && <StudentAdmin students={students} onSaveStuds={saveStuds} user={appUser} />}
+          {page === "calendar" && <HolidayAdmin holidays={holidays} onSaveHoliday={saveHoliday} onDeleteHoliday={deleteHoliday} user={appUser} />}
+          {page === "accounts" && <AccountsPage accounts={accounts} onSaveAccount={saveAcc} onDeleteAccount={delAcc} user={appUser} />}
         </main>
       </div>
     </div>
